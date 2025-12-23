@@ -35,8 +35,8 @@ AutoVizEngine automatically analyzes your dataset and generates visualizations t
 1. **Clone the repository**:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/AutoVizStreamlit.git
-cd AutoVizStreamlit
+git clone https://github.com/NehalTishan/AutoViz.git
+cd AutoViz
 ```
 
 2. **Create a virtual environment (recommended):**
