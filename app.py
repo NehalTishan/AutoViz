@@ -34,6 +34,9 @@ st.dataframe(df.head(), use_container_width=True)
 st.subheader("Summary Statistics")
 st.dataframe(df.describe(), use_container_width=True)
 
+st.subheader("Null values:")
+st.dataframe(df.isnull().sum(), use_container_width=True)
+
 # ---------------- UI CONTROLS ----------------
 library = st.sidebar.radio("Library", ["Seaborn", "Plotly"])
 plot_type = st.sidebar.selectbox(
@@ -56,13 +59,22 @@ num_cols = df.select_dtypes(include="number").columns.tolist()
 # ---------------- PARAM COLLECTION ----------------
 params = {"data": df}
 
+#x parameter collection
 if plot_type not in ["Pairplot", "Heatmap"]:
     params["x"] = st.sidebar.selectbox("X Axis", all_cols)
 
+#y parameter collection
 if plot_type in ["Relational", "Categorical"]:
-    y_choices = num_cols if plot_type == "Relational" else all_cols
-    params["y"] = st.sidebar.selectbox("Y Axis", y_choices)
+    is_count_plot = (plot_type == "Categorical" and 
+                     library == "Plotly" and 
+                     'kind' in params and 
+                     params.get('kind') == 'count')
+    
+    if not is_count_plot:
+        y_choices = num_cols if plot_type == "Relational" else all_cols
+        params["y"] = st.sidebar.selectbox("Y Axis", y_choices)
 
+#if relational plot type selector and also if the library is plotly then z axis selector for 3d
 if plot_type == "Relational":
     params["kind"] = st.sidebar.radio("Kind", ["scatter", "line"])
     if library == "Plotly":
@@ -70,20 +82,66 @@ if plot_type == "Relational":
         if z:
             params["z"] = z
 
+# Add categorical plot type selector
+if plot_type == "Categorical":
+    if library == "Seaborn":
+        cat_kinds = ["strip", "swarm", "box", "violin", "boxen", "bar", "count"]
+        params["kind"] = st.sidebar.selectbox("Categorical Plot Type", cat_kinds)
+    else:
+        plotly_cat_kinds = ["bar", "count", "box", "violin", "strip"]
+        params["kind"] = st.sidebar.selectbox("Categorical Plot Type", plotly_cat_kinds)
+
 if plot_type == "Heatmap" and library == "Seaborn":
     params["figsize"] = (fig_width, fig_height)
 
 
 
 # ---------------- ADVANCED OPTIONS ----------------
+# ---------------- ADVANCED OPTIONS ----------------
 with st.sidebar.expander("Advanced Styling"):
     hue = st.selectbox("Hue (Color)", [None] + all_cols)
     if hue:
         params["hue"] = hue
+    
+    # Add size and style options for relational plots
+    if plot_type == "Relational":
+        size_col = st.selectbox("Size(Choose column with non-null value when using plotly)", [None] + num_cols)
+        if size_col:
+            params["size"] = size_col
+        
+        if library == 'Seaborn':
+            if st.checkbox("Create Subgroup"):
+                order=st.selectbox("Row wise or Column wise", ['row', 'col'])
+                subgroup_data = st.selectbox("select data", [None] + all_cols)
+                params[order] = subgroup_data 
+            params["legend"]= 'auto'
+        
+        style_col = st.selectbox("Style (Marker Style)", [None] + all_cols)
+        if style_col:
+            params["style"] = style_col
+    
+    #bins option for histogram of plotly and seaborn
+    if plot_type == 'Histogram':
+        bins=st.slider("Bins", 5, 100, 10)
+        if bins:
+            params["bins"] = bins
+        if library == 'Seaborn':
+            mult=st.selectbox("Multiple", ['layer', 'dodge', 'stack', 'fill'])
+            if mult:
+                params["multiple"] = mult
+            kde = False
+            if st.checkbox("Kde"):
+                kde = True
+                params["kde"] = kde
+            elem = st.selectbox("Element", ['bars', 'step', 'poly'])
+            if elem:
+                params["element"] = elem
 
+    
+    #pallete options for seaborn and plotly
     if library == "Seaborn":
         params["palette"] = st.selectbox(
-            "Palette", ["deep", "muted", "viridis", "rocket", "mako"]
+            "Palette", ["deep", "muted", "viridis", "rocket", "mako", "flare", "crest"]
         )
     else:
         if hue:
